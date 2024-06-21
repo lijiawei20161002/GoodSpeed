@@ -7,6 +7,7 @@ import pandas as pd
 import nltk
 from nltk.corpus import brown
 import time
+import sys
 
 access_token = os.getenv('ACCESS_TOKEN')
 if access_token is None:
@@ -23,11 +24,9 @@ print("Successfully logged in to Hugging Face")
 
 
 model_name = 'PartAI/Dorna-Llama3-8B-Instruct'
-
+sys.path.append('/data/jiawei_li/GoodSpeed/vllm_source')
 from vllm import LLM, SamplingParams
 
-csv_file_path = '../data/AzureLLMInferenceTrace_conv.csv'  
-df = pd.read_csv(csv_file_path)
 nltk.download('brown')
 brown_words = brown.words()
 
@@ -35,14 +34,6 @@ def generate_meaningful_prompt(token_length):
     # Create a meaningful sentence with the exact number of tokens
     sentence = " ".join(brown_words[:token_length])
     return sentence
-
-# Parameters
-burst_size = 10
-burst_interval = 5  # seconds between bursts
-regular_interval = 0.1  # seconds between prompts within a burst
-
-# Generate prompts with bursty arrival patterns
-#prompts_with_arrivals = simulate_bursty_arrivals(df, burst_size, burst_interval, regular_interval)
 
 prompts = [
     "Output 100 tokens and end with '.'"
@@ -56,11 +47,11 @@ goodput = 0
 
 current_time = time.time()
 outputs = llm.generate(prompts, sampling_params)
-for output in output:
-    print("arrival time:", output.arrival_time)
+for output in outputs:
+    print("arrival time:", output.metrics.arrival_time)
     print("context text:", output.prompt)
-    print("generated text:", output.output_text)
-    print("finish time:", output.finished_time)
+    print("generated text:", output.outputs)
+    print("finish time:", output.metrics.finished_time)
 
 # Profile Inference Time
 '''        

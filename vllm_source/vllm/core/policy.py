@@ -5,8 +5,6 @@ import time
 import sys
 import numpy as np
 import pandas as pd
-sys.path.append('/data/jiawei_li/InferScheduler')
-from predictor import Predictor
 from vllm.sequence import SequenceGroup
 
 class Policy:
@@ -74,53 +72,15 @@ class BiddingPolicy(Policy):
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OnlineSolverPolicy(Policy):
-    def __init__(self, predictor: Predictor, planning_window_size: int = 15, max_batch_size: int = 16, reserve: int = 0):
-        self.predictor = predictor
+    def __init__(self, planning_window_size: int = 15, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.reserve = reserve
         self.solved_priorities: Dict[int, float] = {}
         self.now = time.time()
-
-    def create_dataframe_from_requests(self, current_requests: Deque[SequenceGroup]) -> pd.DataFrame:
-        data = {
-            'TIMESTAMP': [req.metrics.arrival_time for req in current_requests],
-            'GeneratedTokens': [req.metrics.tokens for req in current_requests],
-            'Deadline': [req.metrics.deadline for req in current_requests]
-        }
-        df = pd.DataFrame(data)
-        df['TIMESTAMP'] = pd.to_datetime(df['TIMESTAMP'], unit='s')
-        return df
-
-    def predict_request_distribution(self, processing_requests: Deque[SequenceGroup]) -> Dict[int, int]:
-        df = self.create_dataframe_from_requests(processing_requests)
-        features = self.predictor.create_feature(df)
-        predictions = self.predictor.predict([features])[0]
-        return predictions
-
-    def create_virtual_requests(self, now, prediction_matrix: np.ndarray, time_labels: List[int], token_labels: List[int]) -> Deque[Dict]:
-        virtual_requests = deque()
-        print('========================')
-        prediction_matrix = prediction_matrix.reshape(-1, 5)
-        print('========================')
-        print(prediction_matrix)
-        for i in range(prediction_matrix.shape[0]):
-            for j in range(prediction_matrix.shape[1]):
-                num_requests = int(prediction_matrix[i, j])
-                for _ in range(num_requests):
-                    virtual_request = {
-                        'request_id': f'virtual_{i}_{j}_{_}',
-                        'tokens': token_labels[j],
-                        'deadline': now +time_labels[i] * 0.001
-                    }
-                    virtual_requests.append(virtual_request)
-        return virtual_requests
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
-        #prediction_matrix = self.predict_request_distribution(seq_groups)
-        #virtual_requests = self.create_virtual_requests(now, prediction_matrix, self.predictor.time_labels[1:], self.predictor.token_labels[1:])
-        #all_requests = list(seq_groups) + list(virtual_requests)
         all_reqeusts = list(seq_groups)
 
         N = len(all_requests)
@@ -152,13 +112,6 @@ class OnlineSolverPolicy(Policy):
                 T_req = min(T, int(time_to_deadline))
                 model.addConstr(
                     gp.quicksum(x[i, t] for t in range(T_req)) >= (req.metrics.tokens - req.metrics.processed_token) * finished[i],
-                    f"Completion_{i}",
-                )
-            else:
-                deadline_iter = int((req['deadline'] - now)//inference_time)
-                print(req['deadline'], now, inference_time, deadline_iter)
-                model.addConstr(
-                    gp.quicksum(x[i, t] for t in range(deadline_iter)) >= req['tokens'] * finished[i],
                     f"Completion_{i}",
                 )
 
