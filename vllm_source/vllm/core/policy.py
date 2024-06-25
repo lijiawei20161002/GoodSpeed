@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 from vllm.sequence import SequenceGroup
+import random
 
 class Policy:
 
@@ -36,8 +37,6 @@ class FCFS(Policy):
         now: float,
         seq_group: SequenceGroup,
     ) -> float:
-        #print(seq_group.metrics.arrival_time)
-        #return now - seq_group.metrics.deadline
         return now - seq_group.metrics.arrival_time
 
 class RandomPolicy(Policy):
@@ -71,7 +70,7 @@ class BiddingPolicy(Policy):
         remaining_iterations = (seq_group.metrics.deadline - now) / 0.02  
         return remaining_tokens / max(remaining_iterations, 1)
 
-class OnlineSolverPolicy(Policy):
+class SolverPolicy(Policy):
     def __init__(self, planning_window_size: int = 15, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
@@ -81,7 +80,7 @@ class OnlineSolverPolicy(Policy):
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
-        all_reqeusts = list(seq_groups)
+        all_requests = list(seq_groups)
 
         N = len(all_requests)
         if N == 0:
@@ -152,12 +151,8 @@ class OnlineSolverPolicy(Policy):
 
 class PolicyFactory:
 
-    _POLICY_REGISTRY = {'fcfs': FCFS, 'online_solver': OnlineSolverPolicy}
+    _POLICY_REGISTRY = {'fcfs': FCFS, 'random': RandomPolicy, 'deadline': DeadlinePrioritizePolicy, 'bidding': BiddingPolicy, 'solver': SolverPolicy}
 
     @classmethod
     def get_policy(cls, policy_name: str, **kwargs) -> Policy:
-        if policy_name == 'online_solver':
-            predictor = Predictor(model_path='/data/jiawei_li/InferScheduler/models/model/random_forest.pkl')
-            return cls._POLICY_REGISTRY[policy_name](predictor=predictor, **kwargs)
-        else:
-            return cls._POLICY_REGISTRY[policy_name](**kwargs)
+        return cls._POLICY_REGISTRY[policy_name](**kwargs)

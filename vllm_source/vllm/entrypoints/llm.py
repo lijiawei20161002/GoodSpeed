@@ -238,7 +238,10 @@ class LLM:
                         dynamic_ncols=True)
         # Run the engine.
         outputs: List[RequestOutput] = []
+        nstep=0
         while self.llm_engine.has_unfinished_requests():
+            print("step: ", nstep)
+            nstep = nstep + 1
             step_outputs = self.llm_engine.step()
             for output in step_outputs:
                 if output.finished:

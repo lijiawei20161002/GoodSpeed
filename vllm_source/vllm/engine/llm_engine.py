@@ -1,5 +1,6 @@
 import time
 from typing import Iterable, List, Optional, Type, Union
+from collections import deque
 
 from transformers import GenerationConfig, PreTrainedTokenizer
 

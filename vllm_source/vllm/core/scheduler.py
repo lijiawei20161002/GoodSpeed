@@ -281,6 +281,7 @@ class Scheduler:
         # Sequence groups in the WAITING state.
         # Contain new prefill or preempted requests.
         self.waiting: Deque[SequenceGroup] = deque()
+        self.future_waiting: Deque[SequenceGroup] = deque()
         # Sequence groups in the RUNNING state.
         # Contain decode requests.
         self.running: Deque[SequenceGroup] = deque()
@@ -311,10 +312,32 @@ class Scheduler:
         """The number of new tokens."""
         return 1
 
-    def add_seq_group(self, seq_group: SequenceGroup) -> None:
-        # Add sequence groups to the waiting queue.
-        self.waiting.append(seq_group)
+    def add_seq_group(self, seq_group: SequenceGroup, arrival_time: Optional[float]=None) -> None:
+        """Add a sequence group to the scheduler.
 
+        Args:
+            seq_group: The sequence group to add.
+            arrival_time: Optional arrival time for future requests.
+        """
+        if arrival_time is None or arrival_time <= time.time():
+            self.waiting.append(seq_group)
+        else:
+            seq_group.metrics.arrival_time = arrival_time
+            self.future_waiting.append(seq_group)
+            # Sort future_waiting by arrival time to ensure correct processing order
+            self.future_waiting = deque(sorted(self.future_waiting, key=lambda sg: sg.metrics.arrival_time))
+
+    def update_future_requests(self):
+        """Move future requests to the active waiting queue if their arrival time is reached."""
+        current_time = time.time()
+        while self.future_waiting and self.future_waiting[0].metrics.arrival_time <= current_time:
+            future_request = self.future_waiting.popleft()
+            self.waiting.append(future_request)
+
+    def sort_requests(self, requests, policy, running_queue, now) -> Deque[SequenceGroup]:
+        sorted_requests = policy.sort_by_priority(now, requests)
+        return deque([req for req in sorted_requests if req.metrics.arrival_time <= now and req in running_queue])
+    
     def abort_seq_group(self, request_id: Union[str, Iterable[str]]) -> None:
         """Aborts a sequence group with the given ID.
 
@@ -353,14 +376,16 @@ class Scheduler:
 
     def has_unfinished_seqs(self) -> bool:
         return len(self.waiting) != 0 or len(self.running) != 0 or len(
-            self.swapped) != 0
+            self.swapped) != 0 or len(self.future_waiting) != 0
 
     def get_num_unfinished_seq_groups(self) -> int:
-        return len(self.waiting) + len(self.running) + len(self.swapped)
+        return len(self.waiting) + len(self.running) + len(self.swapped) + len(self.future_waiting)
 
     def _schedule_running(
         self,
         running_queue: deque,
+        waiting_queue: deque,
+        future_waiting_queue: deque,
         budget: SchedulingBudget,
         curr_loras: Optional[Set[int]],
         policy: Policy,
@@ -387,6 +412,9 @@ class Scheduler:
             A tuple of remaining running queue (should be always 0) after
             scheduling and SchedulerRunningOutputs.
         """
+        print('==================')
+        print('enter schedule running!!!')
+        print('==================')
         # Blocks that need to be swapped or copied before model execution.
         blocks_to_swap_out: Dict[int, int] = {}
         blocks_to_copy: Dict[int, List[int]] = {}
@@ -401,7 +429,10 @@ class Scheduler:
         # In this case, the policy is responsible for deciding which sequence
         # groups to preempt.
         now = time.time()
-        running_queue = policy.sort_by_priority(now, running_queue)
+        #running_queue = policy.sort_by_priority(now, running_queue)
+        self.update_future_requests()
+        all_requests = deque(list(waiting_queue) + list(running_queue)+ list(future_waiting_queue))
+        running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
             seq_group = running_queue[0]
             num_running_tokens = self._get_num_new_tokens(
@@ -461,7 +492,7 @@ class Scheduler:
                     num_running_seqs = seq_group.get_max_num_running_seqs()
                     budget.add_num_seqs(seq_group.request_id, num_running_seqs)
                 if curr_loras is not None and seq_group.lora_int_id > 0:
-                    curr_loras.add(seq_group.lora_int_id)
+                    curr_loras.add(seq_group.lora_int_id) 
 
         return running_queue, SchedulerRunningOutputs(
             decode_seq_groups=decode_seq_groups,
@@ -511,6 +542,8 @@ class Scheduler:
         prefill_seq_groups: List[ScheduledSequenceGroup] = []
         now = time.time()
         swapped_queue = policy.sort_by_priority(now, swapped_queue)
+        # should be no difference because swapped_queue is extracted from running_scheduled, where future requests are already filtered
+        #swapped_queue = self.sort_requests(swapped_queue, policy, now)
 
         leftover_swapped: Deque[SequenceGroup] = deque()
         while swapped_queue:
@@ -700,6 +733,9 @@ class Scheduler:
         decodes. If there's a pressure on GPU memory, decode requests can
         be swapped or preempted.
         """
+        print('==================')
+        print('enter schedule default!!!')
+        print('==================')
         # Include running requests to the budget.
         budget = SchedulingBudget(
             token_budget=self.scheduler_config.max_num_batched_tokens,
@@ -731,9 +767,14 @@ class Scheduler:
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
+        print("=======================")
+        print("before schedule running, prefills.seq_groups: ", len(prefills.seq_groups))
+        print("=======================")
         if len(prefills.seq_groups) == 0:
             remaining_running, running_scheduled = self._schedule_running(
                 self.running,
+                self.waiting,
+                self.future_waiting,
                 budget,
                 curr_loras,
                 fcfs_policy,
