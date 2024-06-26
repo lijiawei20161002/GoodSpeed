@@ -447,7 +447,7 @@ class LLMEngine:
                                   arrival_time, lora_request, multi_modal_data)
 
         # Add the sequence group to the scheduler.
-        self.scheduler.add_seq_group(seq_group)
+        self.scheduler.add_seq_group(seq_group, arrival_time)
 
     def abort_request(self, request_id: Union[str, Iterable[str]]) -> None:
         """Aborts a request(s) with the given ID.

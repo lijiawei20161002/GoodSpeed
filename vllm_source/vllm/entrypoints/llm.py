@@ -132,6 +132,7 @@ class LLM:
     def generate(
         self,
         prompts: Optional[Union[str, List[str]]] = None,
+        arrivals: List[float] = None,
         sampling_params: Optional[Union[SamplingParams,
                                         List[SamplingParams]]] = None,
         prompt_token_ids: Optional[List[List[int]]] = None,
@@ -169,6 +170,8 @@ class LLM:
             and prompts is not None:
             raise ValueError("prompts must be None if skip_tokenizer_init "
                              "is True")
+        if len(arrivals) != len(prompts):
+            raise ValueError("The lengths of arrivals and prompts must be the same.")
         if isinstance(prompts, str):
             # Convert a single prompt to a list.
             prompts = [prompts]
@@ -203,7 +206,8 @@ class LLM:
                 prompt,
                 sampling_params[i]
                 if isinstance(sampling_params, list) else sampling_params,
-                token_ids,
+                arrival_time = arrivals[i], 
+                prompt_token_ids=token_ids,
                 lora_request=lora_request,
                 # Get ith image while maintaining the batch dim.
                 multi_modal_data=MultiModalData(
@@ -217,15 +221,18 @@ class LLM:
         self,
         prompt: Optional[str],
         sampling_params: SamplingParams,
+        arrival_time: float, 
         prompt_token_ids: Optional[List[int]],
         lora_request: Optional[LoRARequest] = None,
         multi_modal_data: Optional[MultiModalData] = None,
     ) -> None:
+        print("add request with arrival time:", arrival_time)
         request_id = str(next(self.request_counter))
         self.llm_engine.add_request(request_id,
                                     prompt,
                                     sampling_params,
                                     prompt_token_ids,
+                                    arrival_time = arrival_time,
                                     lora_request=lora_request,
                                     multi_modal_data=multi_modal_data)
 
@@ -240,7 +247,7 @@ class LLM:
         outputs: List[RequestOutput] = []
         nstep=0
         while self.llm_engine.has_unfinished_requests():
-            print("step: ", nstep)
+            #print("step: ", nstep)
             nstep = nstep + 1
             step_outputs = self.llm_engine.step()
             for output in step_outputs:

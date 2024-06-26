@@ -102,15 +102,17 @@ class RequestMetrics:
     first_token_time: Optional[float]
     time_in_queue: Optional[float]
     finished_time: Optional[float] = None
-    tokens: int = 100
+    tokens: int = 10
     workload_type: str = "search"  # Can be 'search', 'chatbox', or 'batch_analysis'
     deadline: Optional[float] = field(init=False)
 
     def __post_init__(self):
+        random.seed(42)
+        self.workload_type = random.choice(["search", "chatbox", "batch_analysis"])
         if self.workload_type == "search":
             self.deadline = self.arrival_time + random.uniform(0.1, 0.5)
         elif self.workload_type == "chatbox":
-            self.deadline = self.arrival_time + (self.tokens * 0.05)
+            self.deadline = self.arrival_time + (self.tokens * 0.5)
         elif self.workload_type == "batch_analysis":
             self.deadline = self.arrival_time + random.uniform(300, 3600)  # 5 minutes to 1 hour
 

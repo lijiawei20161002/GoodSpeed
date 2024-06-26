@@ -258,6 +258,8 @@ class Scheduler:
         # simple and NOT fair. It can lead to starvation of some
         # LoRAs. This should be improved in the future.
         self.lora_config = lora_config
+        print('=====================')
+        print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -327,9 +329,9 @@ class Scheduler:
             # Sort future_waiting by arrival time to ensure correct processing order
             self.future_waiting = deque(sorted(self.future_waiting, key=lambda sg: sg.metrics.arrival_time))
 
-    def update_future_requests(self):
+    def update_future_requests(self, now):
         """Move future requests to the active waiting queue if their arrival time is reached."""
-        current_time = time.time()
+        current_time = now
         while self.future_waiting and self.future_waiting[0].metrics.arrival_time <= current_time:
             future_request = self.future_waiting.popleft()
             self.waiting.append(future_request)
@@ -384,8 +386,6 @@ class Scheduler:
     def _schedule_running(
         self,
         running_queue: deque,
-        waiting_queue: deque,
-        future_waiting_queue: deque,
         budget: SchedulingBudget,
         curr_loras: Optional[Set[int]],
         policy: Policy,
@@ -412,9 +412,6 @@ class Scheduler:
             A tuple of remaining running queue (should be always 0) after
             scheduling and SchedulerRunningOutputs.
         """
-        print('==================')
-        print('enter schedule running!!!')
-        print('==================')
         # Blocks that need to be swapped or copied before model execution.
         blocks_to_swap_out: Dict[int, int] = {}
         blocks_to_copy: Dict[int, List[int]] = {}
@@ -430,8 +427,8 @@ class Scheduler:
         # groups to preempt.
         now = time.time()
         #running_queue = policy.sort_by_priority(now, running_queue)
-        self.update_future_requests()
-        all_requests = deque(list(waiting_queue) + list(running_queue)+ list(future_waiting_queue))
+        self.update_future_requests(now)
+        all_requests = deque(list(self.waiting) + list(running_queue)+ list(self.future_waiting))
         running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
             seq_group = running_queue[0]
@@ -733,9 +730,6 @@ class Scheduler:
         decodes. If there's a pressure on GPU memory, decode requests can
         be swapped or preempted.
         """
-        print('==================')
-        print('enter schedule default!!!')
-        print('==================')
         # Include running requests to the budget.
         budget = SchedulingBudget(
             token_budget=self.scheduler_config.max_num_batched_tokens,
@@ -762,19 +756,14 @@ class Scheduler:
             remaining_waiting, prefills = self._schedule_prefills(
                 self.waiting, budget, curr_loras, enable_chunking=False)
 
-        #fcfs_policy = PolicyFactory.get_policy(policy_name="online_solver")
-        fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
+        fcfs_policy = PolicyFactory.get_policy(policy_name="solver")
+        #fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
-        print("=======================")
-        print("before schedule running, prefills.seq_groups: ", len(prefills.seq_groups))
-        print("=======================")
         if len(prefills.seq_groups) == 0:
             remaining_running, running_scheduled = self._schedule_running(
                 self.running,
-                self.waiting,
-                self.future_waiting,
                 budget,
                 curr_loras,
                 fcfs_policy,
