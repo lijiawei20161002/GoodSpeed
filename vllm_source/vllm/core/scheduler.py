@@ -260,6 +260,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
+        self.default_policy = PolicyFactory.get_policy(policy_name="offline")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -377,6 +378,8 @@ class Scheduler:
                     self.free_seq(seq)
 
     def has_unfinished_seqs(self) -> bool:
+        now = time.time()
+        self.update_future_requests(now)
         return len(self.waiting) != 0 or len(self.running) != 0 or len(
             self.swapped) != 0 or len(self.future_waiting) != 0
 
@@ -756,17 +759,18 @@ class Scheduler:
             remaining_waiting, prefills = self._schedule_prefills(
                 self.waiting, budget, curr_loras, enable_chunking=False)
 
-        fcfs_policy = PolicyFactory.get_policy(policy_name="solver")
         #fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
+        now = time.time()
+        self.update_future_requests(now)
         if len(prefills.seq_groups) == 0:
             remaining_running, running_scheduled = self._schedule_running(
                 self.running,
                 budget,
                 curr_loras,
-                fcfs_policy,
+                self.default_policy,
                 enable_chunking=False)
 
             # If any sequence group is preempted, do not swap in any sequence
@@ -774,7 +778,7 @@ class Scheduler:
             if len(running_scheduled.preempted) + len(
                     running_scheduled.swapped_out) == 0:
                 remaining_swapped, swapped_in = self._schedule_swapped(
-                    self.swapped, budget, curr_loras, fcfs_policy)
+                    self.swapped, budget, curr_loras, self.default_policy)
 
         assert (budget.num_batched_tokens <=
                 self.scheduler_config.max_num_batched_tokens)
@@ -793,6 +797,8 @@ class Scheduler:
         # Update swapped requests.
         self.swapped = remaining_swapped
         self.swapped.extend(running_scheduled.swapped_out)
+        now = time.time()
+        self.update_future_requests(now)
 
         # There should be no prefill from running queue because this policy
         # doesn't allow chunked prefills.

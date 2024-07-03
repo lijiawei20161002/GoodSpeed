@@ -24,7 +24,6 @@ if hf_token is None:
 login(token=hf_token)
 print("Successfully logged in to Hugging Face")
 
-
 model_name = 'PartAI/Dorna-Llama3-8B-Instruct'
 sys.path.append('/data/jiawei_li/GoodSpeed/vllm_source')
 from vllm import LLM, SamplingParams, RequestOutput
@@ -37,7 +36,7 @@ def poisson_arrival_times(rate: float, num_requests: int, start_time: float) -> 
     arrival_times = np.cumsum(intervals) + start_time
     return arrival_times.tolist()
 
-num_requests = 100
+num_requests = 1000
 brown_text = ' '.join(brown_words)
 prompts = [brown_text.split('.')[i] for i in range(num_requests)]
 sampling_params = SamplingParams(temperature=0, top_p=0.95, max_tokens=10, min_tokens=1)
