@@ -260,7 +260,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="offline")
+        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -378,8 +378,6 @@ class Scheduler:
                     self.free_seq(seq)
 
     def has_unfinished_seqs(self) -> bool:
-        now = time.time()
-        self.update_future_requests(now)
         return len(self.waiting) != 0 or len(self.running) != 0 or len(
             self.swapped) != 0 or len(self.future_waiting) != 0
 
@@ -430,8 +428,8 @@ class Scheduler:
         # groups to preempt.
         now = time.time()
         #running_queue = policy.sort_by_priority(now, running_queue)
-        self.update_future_requests(now)
-        all_requests = deque(list(self.waiting) + list(running_queue)+ list(self.future_waiting))
+        #self.update_future_requests(now)
+        all_requests = deque(list(self.waiting) + list(running_queue) + list(self.future_waiting))
         running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
             seq_group = running_queue[0]
@@ -746,7 +744,9 @@ class Scheduler:
         curr_loras = set(
             seq_group.lora_int_id
             for seq_group in self.running) if self.lora_enabled else None
-
+        
+        now = time.time()
+        self.update_future_requests(now)
         remaining_waiting, prefills = (self.waiting,
                                        SchedulerPrefillOutputs.create_empty())
         remaining_running, running_scheduled = (
@@ -763,8 +763,6 @@ class Scheduler:
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
-        now = time.time()
-        self.update_future_requests(now)
         if len(prefills.seq_groups) == 0:
             remaining_running, running_scheduled = self._schedule_running(
                 self.running,
@@ -797,8 +795,6 @@ class Scheduler:
         # Update swapped requests.
         self.swapped = remaining_swapped
         self.swapped.extend(running_scheduled.swapped_out)
-        now = time.time()
-        self.update_future_requests(now)
 
         # There should be no prefill from running queue because this policy
         # doesn't allow chunked prefills.

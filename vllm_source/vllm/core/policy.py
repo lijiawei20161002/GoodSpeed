@@ -37,6 +37,8 @@ class FCFS(Policy):
         now: float,
         seq_group: SequenceGroup,
     ) -> float:
+        #print('=====================')
+        #print("metrics:", seq_group.metrics)
         return now - seq_group.metrics.arrival_time
 
 class RandomPolicy(Policy):
