@@ -1,5 +1,3 @@
-from modelscope.hub.api import HubApi
-from huggingface_hub import HfApi, HfFolder, login
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 import os
 import datetime
@@ -11,7 +9,7 @@ import sys
 import numpy as np
 from typing import List, Union, Optional
 
-model_name = '/data/public_models/huggingface/facebook/opt-13b'
+model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 sys.path.append('/data/jiawei_li/GoodSpeed/vllm_source')
 from vllm import LLM, SamplingParams, RequestOutput
 
@@ -26,7 +24,7 @@ def poisson_arrival_times(rate: float, num_requests: int, start_time: float) -> 
 num_requests = 100
 brown_text = ' '.join(brown_words)
 prompts = [brown_text.split('.')[i] for i in range(num_requests)]
-sampling_params = SamplingParams(temperature=0, top_p=0.95, max_tokens=10, min_tokens=1)
+sampling_params = SamplingParams(temperature=0, top_p=0.95)
 goodput = 0
 current_time = time.time()
 arrival_times = poisson_arrival_times(rate=1.0, num_requests=num_requests, start_time=current_time)
@@ -34,14 +32,15 @@ llm = LLM(model=model_name, trust_remote_code=True)
 outputs = llm.generate(prompts=prompts, sampling_params=sampling_params, arrivals=arrival_times)
 
 for output in outputs:
-    print("prompt:", output.prompt)
-    print("arrival time:", output.metrics.arrival_time)
-    print("finish time:", output.metrics.finished_time)
-    print("deadline:", output.metrics.deadline)
-    print("generated text:", output.outputs[0].text)
-    print("generated token:", output.metrics.processed_token)
     if output.metrics.finished_time <= output.metrics.deadline:
         goodput += 1
+    else:
+        print("prompt:", output.prompt)
+        print("arrival time:", output.metrics.arrival_time)
+        print("finish time:", output.metrics.finished_time)
+        print("deadline:", output.metrics.deadline)
+        print("generated text:", output.outputs[0].text)
+        print('======================')
 print("goodput:", goodput)
 
 # Identify prompts with no outputs

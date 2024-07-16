@@ -113,7 +113,7 @@ class OfflineSolverPolicy(Policy):
             model.setObjective(objective, gp.GRB.MAXIMIZE)
 
             # Constraints
-            inference_time = 0.02
+            inference_time = 0.4
             for i, req in enumerate(all_requests):
                 if isinstance(req, SequenceGroup):
                     time_to_deadline = int((req.metrics.deadline - now)//inference_time)
@@ -143,11 +143,11 @@ class OfflineSolverPolicy(Policy):
 
     def get_priority(self, x, seq_group: SequenceGroup) -> float:
         """Return the precomputed priority from the Gurobi solver results."""
-        if not seq_group.is_prefill:
-            seq_group.get_last_latency(self.now)
-            if seq_group.metrics.processed_token > 0:
-                print('========================')
-                print("metrics ", seq_group.metrics)
+        #if not seq_group.is_prefill():
+        #    seq_group.get_last_latency(self.now)
+        #    if seq_group.metrics.processed_token > 0:
+        #        print('========================')
+        #        print("metrics ", seq_group.metrics)
         # Assign priorities based on solver results
         var = x[int(seq_group.request_id)*self.planning_window_size+self.call_count]
         if hasattr(var, 'X'):

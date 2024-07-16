@@ -260,7 +260,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
+        self.default_policy = PolicyFactory.get_policy(policy_name="offline")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -284,7 +284,7 @@ class Scheduler:
         # Sequence groups in the WAITING state.
         # Contain new prefill or preempted requests.
         self.waiting: Deque[SequenceGroup] = deque()
-        self.future_waiting: Deque[SequenceGroup] = deque()
+        self.future: Deque[SequenceGroup] = deque()
         # Sequence groups in the RUNNING state.
         # Contain decode requests.
         self.running: Deque[SequenceGroup] = deque()
@@ -326,15 +326,15 @@ class Scheduler:
             self.waiting.append(seq_group)
         else:
             seq_group.metrics.arrival_time = arrival_time
-            self.future_waiting.append(seq_group)
-            # Sort future_waiting by arrival time to ensure correct processing order
-            self.future_waiting = deque(sorted(self.future_waiting, key=lambda sg: sg.metrics.arrival_time))
+            self.future.append(seq_group)
+            # Sort future queue by arrival time to ensure correct processing order
+            self.future = deque(sorted(self.future, key=lambda sg: sg.metrics.arrival_time))
 
     def update_future_requests(self, now):
         """Move future requests to the active waiting queue if their arrival time is reached."""
         current_time = now
-        while self.future_waiting and self.future_waiting[0].metrics.arrival_time <= current_time:
-            future_request = self.future_waiting.popleft()
+        while self.future and self.future[0].metrics.arrival_time <= current_time:
+            future_request = self.future.popleft()
             self.waiting.append(future_request)
 
     def sort_requests(self, requests, policy, running_queue, now) -> Deque[SequenceGroup]:
@@ -379,10 +379,10 @@ class Scheduler:
 
     def has_unfinished_seqs(self) -> bool:
         return len(self.waiting) != 0 or len(self.running) != 0 or len(
-            self.swapped) != 0 or len(self.future_waiting) != 0
+            self.swapped) != 0 or len(self.future) != 0
 
     def get_num_unfinished_seq_groups(self) -> int:
-        return len(self.waiting) + len(self.running) + len(self.swapped) + len(self.future_waiting)
+        return len(self.waiting) + len(self.running) + len(self.swapped) + len(self.future)
 
     def _schedule_running(
         self,
@@ -426,10 +426,9 @@ class Scheduler:
         # to keep all the sequence groups in the RUNNING state.
         # In this case, the policy is responsible for deciding which sequence
         # groups to preempt.
-        now = time.time()
         #running_queue = policy.sort_by_priority(now, running_queue)
-        #self.update_future_requests(now)
-        all_requests = deque(list(self.waiting) + list(running_queue) + list(self.future_waiting))
+        now = time.time()
+        all_requests = deque(list(running_queue) + list(self.future))
         running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
             seq_group = running_queue[0]
@@ -785,6 +784,8 @@ class Scheduler:
         # Update waiting requests.
         self.waiting = remaining_waiting
         self.waiting.extendleft(running_scheduled.preempted)
+        now = time.time()
+        self.update_future_requests(now)
         # Update new running requests.
         self.running = remaining_running
         self.running.extend([s.seq_group for s in prefills.seq_groups])
