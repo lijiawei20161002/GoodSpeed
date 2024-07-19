@@ -531,8 +531,6 @@ class LLMEngine:
         return request_outputs
 
     def step(self) -> List[RequestOutput]:
-        #print('====================')
-        #print(time.time())
         """Performs one decoding iteration and returns newly generated results.
 
         .. figure:: https://i.imgur.com/sv2HssD.png
@@ -600,8 +598,7 @@ class LLMEngine:
 
         # Log stats.
         self.do_log_stats(scheduler_outputs, output)
-
-        #print(time.time())
+        
         return request_outputs
 
     def do_log_stats(

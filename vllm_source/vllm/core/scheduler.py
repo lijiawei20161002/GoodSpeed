@@ -2,6 +2,7 @@ import enum
 import os
 import random
 import time
+import logging
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -16,6 +17,14 @@ from vllm.sequence import (Sequence, SequenceData, SequenceGroup,
 from vllm.utils import merge_dicts
 
 logger = init_logger(__name__)
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format='%(levelname)s %(asctime)s %(filename)s:%(lineno)d] %(message)s',
+    datefmt='%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(__name__+'.log', mode='a'),  # Append mode
+    ]
+)
 
 # Test-only. If configured, decode is preempted with
 # ARTIFICIAL_PREEMPTION_PROB% probability.
@@ -260,7 +269,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="offline")
+        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -332,8 +341,7 @@ class Scheduler:
 
     def update_future_requests(self, now):
         """Move future requests to the active waiting queue if their arrival time is reached."""
-        current_time = now
-        while self.future and self.future[0].metrics.arrival_time <= current_time:
+        while self.future and self.future[0].metrics.arrival_time <= now:
             future_request = self.future.popleft()
             self.waiting.append(future_request)
 
@@ -426,10 +434,11 @@ class Scheduler:
         # to keep all the sequence groups in the RUNNING state.
         # In this case, the policy is responsible for deciding which sequence
         # groups to preempt.
-        #running_queue = policy.sort_by_priority(now, running_queue)
         now = time.time()
-        all_requests = deque(list(running_queue) + list(self.future))
-        running_queue = self.sort_requests(all_requests, policy, running_queue, now)
+        running_queue = policy.sort_by_priority(now, running_queue)
+        logging.info("len(waiting queue): "+str(len(self.waiting)))
+        #all_requests = deque(list(running_queue) + list(self.swapped) + list(self.waiting) + list(self.future))
+        #running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
             seq_group = running_queue[0]
             num_running_tokens = self._get_num_new_tokens(
@@ -752,13 +761,14 @@ class Scheduler:
             self.running, SchedulerRunningOutputs.create_empty())
         remaining_swapped, swapped_in = (
             self.swapped, SchedulerSwappedInOutputs.create_empty())
+        
 
         # If any requests are swapped, prioritized swapped requests.
         if not self.swapped:
             remaining_waiting, prefills = self._schedule_prefills(
                 self.waiting, budget, curr_loras, enable_chunking=False)
 
-        #fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
+        fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
@@ -775,7 +785,7 @@ class Scheduler:
             if len(running_scheduled.preempted) + len(
                     running_scheduled.swapped_out) == 0:
                 remaining_swapped, swapped_in = self._schedule_swapped(
-                    self.swapped, budget, curr_loras, self.default_policy)
+                    self.swapped, budget, curr_loras, fcfs_policy)
 
         assert (budget.num_batched_tokens <=
                 self.scheduler_config.max_num_batched_tokens)
@@ -784,8 +794,8 @@ class Scheduler:
         # Update waiting requests.
         self.waiting = remaining_waiting
         self.waiting.extendleft(running_scheduled.preempted)
-        now = time.time()
-        self.update_future_requests(now)
+        #now = time.time()
+        #self.update_future_requests(now)
         # Update new running requests.
         self.running = remaining_running
         self.running.extend([s.seq_group for s in prefills.seq_groups])
