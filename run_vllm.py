@@ -15,6 +15,7 @@ from vllm import LLM, SamplingParams, RequestOutput
 
 nltk.download('brown')
 brown_words = brown.words()
+np.random.seed(42)
 
 def poisson_arrival_times_with_bursts(
     rate: float, 
