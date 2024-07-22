@@ -92,7 +92,7 @@ class BiddingPolicy(Policy):
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OfflineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 10, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 10000, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.solved_priorities: Dict[int, float] = {}
@@ -194,7 +194,7 @@ class OfflineSolverPolicy(Policy):
         return priorities
     
 class OnlineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 5, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 1, max_batch_size: int = 16, reserve: int = 10):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.reserve = reserve
@@ -246,8 +246,9 @@ class OnlineSolverPolicy(Policy):
                         )
 
                 # Batch size constraints
-                for t in range(self.planning_window_size):
-                    model.addConstr(gp.quicksum(x[i, t] for i in range(N)) <= b)
+                model.addConstr(gp.quicksum(x[i, 0] for i in range(N)) <= b)
+                for t in range(1, self.planning_window_size):
+                    model.addConstr(gp.quicksum(x[i, t] for i in range(N)) <= b - self.reserve)
 
                 # Solve the model
                 model.optimize()

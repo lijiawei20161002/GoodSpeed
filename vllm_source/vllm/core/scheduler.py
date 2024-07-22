@@ -795,7 +795,7 @@ class Scheduler:
         self.waiting = remaining_waiting
         self.waiting.extendleft(running_scheduled.preempted)
         #now = time.time()
-        #self.update_future_requests(now)
+        #self.future_requests(now)
         # Update new running requests.
         self.running = remaining_running
         self.running.extend([s.seq_group for s in prefills.seq_groups])

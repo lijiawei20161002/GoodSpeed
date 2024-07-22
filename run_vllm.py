@@ -55,7 +55,7 @@ burst_rate = 100.0  # Average rate of 100 requests per second during bursts
 burst_duration = 0.1  # Each burst lasts for 0.1 seconds
 burst_interval = 0.4  # Bursts occur every 0.4 seconds
 
-num_requests = 1000
+num_requests = 100
 brown_text = ' '.join(brown_words)
 prompts = [brown_text.split('.')[i] for i in range(num_requests)]
 sampling_params = SamplingParams(temperature=0, top_p=0.95)
