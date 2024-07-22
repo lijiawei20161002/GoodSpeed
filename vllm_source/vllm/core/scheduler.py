@@ -269,7 +269,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
+        self.default_policy = PolicyFactory.get_policy(policy_name="solver")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -436,7 +436,7 @@ class Scheduler:
         # groups to preempt.
         now = time.time()
         running_queue = policy.sort_by_priority(now, running_queue)
-        logging.info("len(waiting queue): "+str(len(self.waiting)))
+        #logging.info("len(waiting queue): "+str(len(self.waiting)))
         #all_requests = deque(list(running_queue) + list(self.swapped) + list(self.waiting) + list(self.future))
         #running_queue = self.sort_requests(all_requests, policy, running_queue, now)
         while running_queue:
