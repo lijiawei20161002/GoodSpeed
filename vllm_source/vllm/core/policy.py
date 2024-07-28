@@ -87,7 +87,8 @@ class BiddingPolicy(Policy):
         now: float,
         seq_group: SequenceGroup,
     ) -> float:
-        remaining_tokens = seq_group.metrics.tokens - seq_group.metrics.processed_token
+        remaining_tokens = seq_group.metrics.tokens - seq_group.get_seqs()[0].get_output_len()
+        #remaining_tokens = seq_group.metrics.tokens - seq_group.metrics.processed_token
         remaining_iterations = (seq_group.metrics.deadline - now) / 0.02  
         return remaining_tokens / max(remaining_iterations, 1)
 
@@ -194,17 +195,18 @@ class OfflineSolverPolicy(Policy):
         return priorities
     
 class OnlineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 1, max_batch_size: int = 16, reserve: int = 10):
+    def __init__(self, planning_window_size: int = 20, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.reserve = reserve
         self.solved_priorities: Dict[int, float] = {}
-        self.start = None
-        self.inference_time = 0.0347
+        self.inference_time = 1
     
     def sort_by_priority(self, now: float, seq_groups: Deque[SequenceGroup]) -> Deque[SequenceGroup]:
         """Solve the optimization problem and assign priorities based on the solution."""
         all_requests = list(seq_groups)
+        if len(all_requests) == 0:
+            return seq_groups
 
         N = len(all_requests)
         if N == 0:
@@ -231,7 +233,7 @@ class OnlineSolverPolicy(Policy):
                 b = self.max_batch_size
 
                 # Objective: maximize the number of completed sequences plus sum of request processing
-                objective = gp.quicksum(finished[i] for i in range(N)) 
+                objective = gp.quicksum(finished[i] for i in range(N)) + gp.quicksum(gp.quicksum(x[i, t] for t in range(T)) for i in range(N))
                 model.setObjective(objective, gp.GRB.MAXIMIZE)
 
                 # Constraints
@@ -241,7 +243,7 @@ class OnlineSolverPolicy(Policy):
                         time_to_deadline = int((req.metrics.deadline - now)//inference_time)
                         T_req = min(T, int(time_to_deadline))
                         model.addConstr(
-                            gp.quicksum(x[i, t] for t in range(T_req)) >= (req.metrics.tokens - req.metrics.processed_token) * finished[i],
+                            gp.quicksum(x[i, t] for t in range(T_req)) >= (req.metrics.tokens - req.get_seqs()[0].get_output_len()) * finished[i],
                             f"Completion_{i}",
                         )
 
@@ -255,10 +257,12 @@ class OnlineSolverPolicy(Policy):
 
                 # Extract optimized values and sort requests
                 x_values = model.getAttr('X', x)
-                request_with_x = [(i, req, x_values[i, 0]) for i, req in enumerate(all_requests)]
+                request_with_x = [(i, req, x_values[(i, 0)]) for i, req in enumerate(all_requests)]
                 sorted_requests = sorted(request_with_x, key=lambda item: item[2], reverse=True)
                 sorted_requests = deque(req for _, req, _ in sorted_requests)                          
 
+            ids = [req.request_id for req in sorted_requests]
+            print(ids)
             return sorted_requests
               
 

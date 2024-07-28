@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 requests = [100, 500, 1000]
 oracle_goodput = [77, 474, 978]
 fcfs_goodput = [55, 387, 693]
-solver_goodput = [47, 192, 335]
-deadline_goodput = [40, 375, 636]
-random_goodput = [41, 363, 763]
-bidding_goodput = [68, 361, 680]
+solver_goodput = [37, 155, 304]
+deadline_goodput = [39, 332, 677]
+random_goodput = [50, 368, 754]
+bidding_goodput = [55, 393, 840]
 
 # Create the plot
 plt.rcParams['font.family'] = 'Comic Sans MS'

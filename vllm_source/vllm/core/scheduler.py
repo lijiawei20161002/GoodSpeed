@@ -650,6 +650,10 @@ class Scheduler:
         waiting_queue = deque([s for s in waiting_queue])
 
         leftover_waiting_sequences: Deque[SequenceGroup] = deque()
+        now = time.time()
+        waiting_queue = self.default_policy.sort_by_priority(now, waiting_queue)
+        #ids = [req.request_id for req in waiting_queue]
+        #print("sorted waiting queue:", ids)
         while self._passed_delay(time.time()) and waiting_queue:
             seq_group = waiting_queue[0]
 
@@ -761,14 +765,12 @@ class Scheduler:
             self.running, SchedulerRunningOutputs.create_empty())
         remaining_swapped, swapped_in = (
             self.swapped, SchedulerSwappedInOutputs.create_empty())
-        
 
         # If any requests are swapped, prioritized swapped requests.
         if not self.swapped:
             remaining_waiting, prefills = self._schedule_prefills(
                 self.waiting, budget, curr_loras, enable_chunking=False)
-
-        fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
+            
         # Don't schedule decodes if prefills are scheduled.
         # NOTE: If `_schedule_prefills` doesn't enable chunking, self.running
         # only contains decode requests, not chunked prefills.
@@ -785,7 +787,7 @@ class Scheduler:
             if len(running_scheduled.preempted) + len(
                     running_scheduled.swapped_out) == 0:
                 remaining_swapped, swapped_in = self._schedule_swapped(
-                    self.swapped, budget, curr_loras, fcfs_policy)
+                    self.swapped, budget, curr_loras, self.default_policy)
 
         assert (budget.num_batched_tokens <=
                 self.scheduler_config.max_num_batched_tokens)
