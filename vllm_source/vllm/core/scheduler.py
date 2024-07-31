@@ -269,7 +269,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="solver")
+        self.default_policy = PolicyFactory.get_policy(policy_name="bidding")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -651,6 +651,7 @@ class Scheduler:
 
         leftover_waiting_sequences: Deque[SequenceGroup] = deque()
         now = time.time()
+        #waiting_queue = PolicyFactory.get_policy(policy_name="fcfs").sort_by_priority(now, waiting_queue)
         waiting_queue = self.default_policy.sort_by_priority(now, waiting_queue)
         #ids = [req.request_id for req in waiting_queue]
         #print("sorted waiting queue:", ids)
@@ -718,6 +719,8 @@ class Scheduler:
             if curr_loras is not None and lora_int_id > 0:
                 curr_loras.add(lora_int_id)
             waiting_queue.popleft()
+            if len(waiting_queue) > 0:
+                seq_group.metrics.price = seq_group.metrics.price + 1.0
             self._allocate_and_set_running(seq_group)
             seq_groups.append(
                 ScheduledSequenceGroup(seq_group=seq_group,

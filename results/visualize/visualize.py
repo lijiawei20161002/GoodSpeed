@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 
 # Data
-requests = [100, 500, 1000]
-oracle_goodput = [77, 474, 978]
-fcfs_goodput = [55, 387, 693]
-solver_goodput = [37, 155, 304]
-deadline_goodput = [39, 332, 677]
-random_goodput = [50, 368, 754]
-bidding_goodput = [55, 393, 840]
+requests = [100, 500, 1000, 5000]
+oracle_goodput = [77, 474, 978, 4923]
+fcfs_goodput = [55, 387, 693, 4290]
+solver_goodput = [37, 155, 304, 876]
+deadline_goodput = [39, 332, 677, 4048]
+random_goodput = [50, 368, 754, 4192]
+bidding_goodput = [55, 393, 840, 4605]
 
 # Create the plot
 plt.rcParams['font.family'] = 'Comic Sans MS'

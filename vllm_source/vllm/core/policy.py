@@ -93,12 +93,12 @@ class BiddingPolicy(Policy):
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OfflineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 10000, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 3000, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.solved_priorities: Dict[int, float] = {}
         self.start = None
-        self.inference_time = 0.0347
+        self.inference_time = 1
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
@@ -118,8 +118,10 @@ class OfflineSolverPolicy(Policy):
             # Create a new Gurobi model
             #model = gp.Model("OnlineScheduler")
             model.Params.LogToConsole = 0
-            model.setParam('LogFile', 'online.solver')
-            model.Params.Presolve = -1
+            model.setParam('LogFile', 'offline.solver')
+            model.Params.Presolve = 1  # Enable presolve
+            model.setParam('Method', 1)  # Try dual simplex
+            model.setParam('Heuristics', 0.1) 
 
             # Decision variables
             x = model.addVars(N, T, vtype=gp.GRB.BINARY, name="x")
@@ -195,7 +197,7 @@ class OfflineSolverPolicy(Policy):
         return priorities
     
 class OnlineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 20, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 3, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.reserve = reserve
@@ -233,7 +235,8 @@ class OnlineSolverPolicy(Policy):
                 b = self.max_batch_size
 
                 # Objective: maximize the number of completed sequences plus sum of request processing
-                objective = gp.quicksum(finished[i] for i in range(N)) + gp.quicksum(gp.quicksum(x[i, t] for t in range(T)) for i in range(N))
+                objective = gp.quicksum(finished[i] for i in range(N)) 
+                #+ gp.quicksum(gp.quicksum(x[i, t] for t in range(T)) for i in range(N))
                 model.setObjective(objective, gp.GRB.MAXIMIZE)
 
                 # Constraints

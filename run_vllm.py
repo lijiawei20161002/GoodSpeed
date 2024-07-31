@@ -9,9 +9,21 @@ import sys
 import numpy as np
 from typing import List, Union, Optional
 
-model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
+#'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
+#'/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
+#'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
+#'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
+#'/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
+#'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
+#'/data/public_models/Llama-3-70B'
+#'/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
+model_name = '/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 sys.path.append('/data/jiawei_li/GoodSpeed/vllm_source')
 from vllm import LLM, SamplingParams, RequestOutput
+
+import ray
+runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
+ray.init(runtime_env=runtime_env)
 
 nltk.download('brown')
 brown_words = brown.words()
@@ -56,14 +68,13 @@ burst_duration = 0.1  # Each burst lasts for 0.1 seconds
 burst_interval = 0.4  # Bursts occur every 0.4 seconds
 
 num_requests = 1000
-input_length = 128
 brown_text = ' '.join(brown_words)
-prompts = [brown_text[(i-1)*input_length:i*input_length] for i in range(num_requests)]
+prompts = [brown_text.split('.')[i] for i in range(num_requests)]
 sampling_params = SamplingParams(temperature=0, top_p=0.95)
 goodput = 0
 current_time = time.time()
 arrival_times = poisson_arrival_times_with_bursts(rate, num_requests, current_time, burst_rate, burst_duration, burst_interval)
-llm = LLM(model=model_name, trust_remote_code=True, max_num_seqs=16)
+llm = LLM(model=model_name, trust_remote_code=True, max_num_seqs=16) #tensor_parallel_size=4)
 outputs = llm.generate(prompts=prompts, sampling_params=sampling_params, arrivals=arrival_times)
 
 for output in outputs:

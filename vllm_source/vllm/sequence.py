@@ -106,6 +106,7 @@ class RequestMetrics:
     tokens: int = 10
     workload_type: str = "search"  # Can be 'search', 'chatbox', or 'batch_analysis'
     deadline: Optional[float] = field(init=False)
+    price: float = 0.0
 
     def __post_init__(self):
         self.workload_type = random.choice(["search", "chatbox", "batch_analysis"])
