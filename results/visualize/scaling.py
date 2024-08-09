@@ -22,7 +22,7 @@ plt.plot(requests, bidding_goodput, color='green', marker='x', label='Bidding Go
 # Adding text labels for the last point of each series
 # Adjust position based on the context of each line
 label_offset = 50
-horizontal_positions = [50, -50, 100, -100, 50]  # Positive for right, negative for left adjustments
+horizontal_positions = [50, 50, 100, -100, 50]  # Positive for right, negative for left adjustments
 
 # Draw labels near the last point but adjust positions to avoid crowding
 for i, (label, hp_offset) in enumerate(zip(

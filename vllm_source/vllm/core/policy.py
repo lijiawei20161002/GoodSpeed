@@ -93,12 +93,12 @@ class BiddingPolicy(Policy):
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OfflineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 3000, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 50000, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.solved_priorities: Dict[int, float] = {}
         self.start = None
-        self.inference_time = 1
+        self.inference_time = 0.1
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
@@ -125,23 +125,34 @@ class OfflineSolverPolicy(Policy):
 
             # Decision variables
             x = model.addVars(N, T, vtype=gp.GRB.BINARY, name="x")
-            finished = model.addVars(N, vtype=gp.GRB.BINARY, name="finished")
+            finished = model.addVars(N, T, vtype=gp.GRB.BINARY, name="finished")
+            finish = model.addVars(N, vtype=gp.GRB.BINARY, name="finish")
             b = self.max_batch_size
 
             # Objective: maximize the number of completed sequences plus sum of request processing
-            objective = gp.quicksum(finished[i] for i in range(N)) 
+            objective = gp.quicksum(finish[i] for i in range(N)) 
             model.setObjective(objective, gp.GRB.MAXIMIZE)
 
             # Constraints
             inference_time = self.inference_time
             for i, req in enumerate(all_requests):
                 if isinstance(req, SequenceGroup):
+                    arrival_time = max(0, int((req.metrics.arrival_time - now)//inference_time))
                     time_to_deadline = int((req.metrics.deadline - now)//inference_time)
                     T_req = min(T, int(time_to_deadline))
                     model.addConstr(
-                        gp.quicksum(x[i, t] for t in range(T_req)) >= (req.metrics.tokens - req.metrics.processed_token) * finished[i],
+                        gp.quicksum(x[i, t] for t in range(arrival_time, T_req)) >= req.metrics.tokens * finish[i],
                         f"Completion_{i}",
                     )
+                    for t in range(0, arrival_time):
+                        model.addConstr(x[i, t] == 0)
+                    # Ensure continuous selection until finished
+                    for t in range(arrival_time + 1, T_req):
+                        model.addConstr(x[i, t] >= x[i, t - 1] - (1 - finished[i, t - 1]), f"ContinuousSelection_{i}_{t}")
+                    # Ensure continuous selection 
+                    for t in range(T):
+                        generated_token = gp.quicksum(x[i, tt] for tt in range(t))
+                        model.addGenConstrIndicator(finished[i, t], True, generated_token, gp.GRB.EQUAL, req.metrics.tokens, f"IndicatorFinish_{i}_{t}")
 
             # Batch size constraints
             for t in range(self.planning_window_size):

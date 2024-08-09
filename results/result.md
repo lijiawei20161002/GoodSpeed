@@ -7,6 +7,15 @@
 | deepseek-llm-67b-chat   | 4 Nvidia A100   | 1000        | 978    | 335   | 290    | 329      | 337    | 467     |
 | Llama-3-70B             | 4 Nvidia A100   | 1000        | 978    | 335   | 308    | 335      | 355    | 557     |
 
+### Performance Comparison on Different Models (chunked prefill, 1000 requests)
+| Model                     | GPU             | Request Num | Oracle | FCFS | Deadline | Random | Bidding |
+|---------------------------|-----------------|-------------|--------|------|----------|--------|---------|
+| deepseek-llm-7b-base      | 1 Nvidia A100   | 1000        | 978    | 910  | 894      | 904    | 933     |
+| Llama-2-13b-chat-hf       | 1 Nvidia A100   | 1000        | 978    | 753  | 668      | 762    | 856     |
+| Qwen1.5-14B               | 1 Nvidia A100   | 1000        | 978    | 703  | 651      | 732    | 853     |
+| deepseek-llm-67b-chat     | 4 Nvidia A100   | 1000        | 978    | 335  | 332      | 346    | 563     |
+| Meta-Llama-3-70B-Instruct | 4 Nvidia A100   | 1000        | 978    | 335  | 335      | 341    | 488     |
+
 ### Performance Comparison of Policies (solver only in decodes, window=10)
 | request_num | oracle | fcfs | solver | deadline | random | bidding |
 |-------------|--------|------|--------|----------|--------|---------|
@@ -23,6 +32,15 @@
 | 1000            | 978    | 693   | 304     | 677      | 754    | 840     |
 | 5000            | 4923   | 4290  | 876     | 4048     | 4192   | 4605    |
 | Timeline(h:m:s) | -      | 34:10 | 1:33:17 | 34:17    | 34:17  | 34:00   | 
+
+- **Model**: Meta-Llama-3-70B-Instruct (chunked prefill)
+| request_num     | fcfs  | bidding | random | deadline |
+|-----------------|-------|---------|--------|----------|
+| 100             | 37    | 37      | 37     | 37       | 
+| 500             | 174   | 256     | 189    | 174      | 
+| 1000            | 335   | 509     | 365    | 335      |
+| 5000            | 1625  | 2852    | 1716   | 1984     |
+| Timeline(h:m:s) | 36:12 | 35:08   | 36:26  | 35:29    |
  
 
 ### Workload Configuration
@@ -59,3 +77,28 @@
 | 10               | 43      |
 | 12               | 41      |
 | 16               | 37      |
+
+### Batch Size Impact
+- **Model**: Llama-2-13b-chat-hf
+| Batch Size | Scheduling Policy | Timeline | Goodput |
+|------------|-------------------|----------|---------|
+| 2          | Bidding           | 31:06    | 580     |
+| 2          | FCFS              | 31:10    | 281     |
+| 4          | Bidding           | 16:04    | 644     |
+| 4          | FCFS              | 16:09    | 328     |
+| 8          | Bidding           | 08:31    | 710     |
+| 8          | FCFS              | 08:35    | 335     |
+| 16         | Bidding           | 06:35    | 839     |
+| 16         | FCFS              | 06:37    | 741     |
+
+- **Model**: Meta-Llama-3-70B-Instruct (chunked prefill)
+| Batch Size | Scheduling Policy | Timeline | Goodput |
+|------------|-------------------|----------|---------|
+| 2          | FCFS              | 50:07    | 231     |
+| 2          | Bidding           | 49:45    | 405     |
+| 4          | FCFS              | 26:02    | 292     |
+| 4          | Bidding           | 25:38    | 496     |
+| 8          | FCFS              | 13:42    | 333     |
+| 8          | Bidding           | 13:27    | 535     |
+| 16         | FCFS              | 07:35    | 335     |
+| 16         | Bidding           | 07:19    | 509     |

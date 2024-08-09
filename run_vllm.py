@@ -1,13 +1,10 @@
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-import os
-import datetime
-import pandas as pd
+import csv
 import nltk
 from nltk.corpus import brown
 import time
 import sys
 import numpy as np
-from typing import List, Union, Optional
+from typing import List
 
 #'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #'/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
@@ -17,13 +14,13 @@ from typing import List, Union, Optional
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 #'/data/public_models/Llama-3-70B'
 #'/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
-model_name = '/data/public_models/huggingface/Qwen/Qwen1.5-14B'
+model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 sys.path.append('/data/jiawei_li/GoodSpeed/vllm_source')
 from vllm import LLM, SamplingParams, RequestOutput
 
-import ray
-runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
-ray.init(runtime_env=runtime_env)
+#import ray
+#runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
+#ray.init(runtime_env=runtime_env)
 
 nltk.download('brown')
 brown_words = brown.words()
@@ -74,23 +71,29 @@ sampling_params = SamplingParams(temperature=0, top_p=0.95)
 goodput = 0
 current_time = time.time()
 arrival_times = poisson_arrival_times_with_bursts(rate, num_requests, current_time, burst_rate, burst_duration, burst_interval)
-llm = LLM(model=model_name, trust_remote_code=True, max_num_seqs=16) #tensor_parallel_size=4)
+llm = LLM(model=model_name, trust_remote_code=True, enable_chunked_prefill=False, max_num_seqs=16) # tensor_parallel_size=4)
 outputs = llm.generate(prompts=prompts, sampling_params=sampling_params, arrivals=arrival_times)
 
+metrics_data = []
 for output in outputs:
     if output.metrics.finished_time <= output.metrics.deadline:
         goodput += 1
-    else:
-        print("prompt:", output.prompt)
-        print("arrival time:", output.metrics.arrival_time)
-        print("finish time:", output.metrics.finished_time)
-        print("deadline:", output.metrics.deadline)
-        print("generated text:", output.outputs[0].text)
-        print('======================')
+    metrics_data.append({
+        'prompt': output.prompt,
+        'arrival_time': output.metrics.arrival_time,
+        'finish_time': output.metrics.finished_time,
+        'deadline': output.metrics.deadline,
+        'generated_text': output.outputs[0].text,
+        'price': output.metrics.price
+    })
 print("goodput:", goodput)
-
-# Identify prompts with no outputs
-#prompt_ids_with_outputs = {output.request_id for output in outputs}
-#print(prompt_ids_with_outputs)
-#missing_prompt_ids = [i for i in range(num_requests) if str(i) not in prompt_ids_with_outputs]
-#print(f"Unfinished Requests: {missing_prompt_ids}")
+csv_file = 'fcfs_output_metrics.csv'
+csv_columns = ['prompt', 'arrival_time', 'finish_time', 'deadline', 'generated_text', 'price']
+try:
+    with open(csv_file, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+        writer.writeheader()
+        for data in metrics_data:
+            writer.writerow(data)
+except IOError:
+    print("I/O error")

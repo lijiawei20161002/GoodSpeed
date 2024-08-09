@@ -269,7 +269,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="bidding")
+        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -436,6 +436,12 @@ class Scheduler:
         # groups to preempt.
         now = time.time()
         running_queue = policy.sort_by_priority(now, running_queue)
+        opportunity_cost = 0.0
+        remain_budget = budget.max_num_seqs - budget.num_curr_seqs
+        if len(running_queue) > remain_budget:
+            req = list(running_queue)[remain_budget]
+            now = time.time()
+            opportunity_cost = max(0, req.metrics.tokens/(req.metrics.deadline-now))
         #logging.info("len(waiting queue): "+str(len(self.waiting)))
         #all_requests = deque(list(running_queue) + list(self.swapped) + list(self.waiting) + list(self.future))
         #running_queue = self.sort_requests(all_requests, policy, running_queue, now)
@@ -490,6 +496,7 @@ class Scheduler:
                                                token_chunk_size=1))
                 budget.add_num_batched_tokens(seq_group.request_id,
                                               num_running_tokens)
+                seq_group.metrics.price = seq_group.metrics.price + opportunity_cost
                 # OPTIMIZATION:  Note that get_max_num_running_seqs is
                 # expensive. For the default scheduling chase where
                 # enable_chunking is False, num_seqs are updated before running
@@ -653,6 +660,12 @@ class Scheduler:
         now = time.time()
         #waiting_queue = PolicyFactory.get_policy(policy_name="fcfs").sort_by_priority(now, waiting_queue)
         waiting_queue = self.default_policy.sort_by_priority(now, waiting_queue)
+        opportunity_cost = 0.0
+        remain_budget = budget.max_num_seqs - budget.num_curr_seqs
+        if len(waiting_queue) > remain_budget:
+            req = list(waiting_queue)[remain_budget]
+            now = time.time()
+            opportunity_cost = max(0, req.metrics.tokens/(req.metrics.deadline-now))
         #ids = [req.request_id for req in waiting_queue]
         #print("sorted waiting queue:", ids)
         while self._passed_delay(time.time()) and waiting_queue:
@@ -719,8 +732,7 @@ class Scheduler:
             if curr_loras is not None and lora_int_id > 0:
                 curr_loras.add(lora_int_id)
             waiting_queue.popleft()
-            if len(waiting_queue) > 0:
-                seq_group.metrics.price = seq_group.metrics.price + 1.0
+            seq_group.metrics.price = seq_group.metrics.price + opportunity_cost
             self._allocate_and_set_running(seq_group)
             seq_groups.append(
                 ScheduledSequenceGroup(seq_group=seq_group,
@@ -850,6 +862,9 @@ class Scheduler:
         )
         curr_loras: Set[int] = set()
 
+        now = time.time()
+        self.update_future_requests(now)
+
         remaining_waiting, prefills = (self.waiting,
                                        SchedulerPrefillOutputs.create_empty())
         remaining_running, running_scheduled = (
@@ -857,21 +872,21 @@ class Scheduler:
         remaining_swapped, swapped_in = (
             self.swapped, SchedulerSwappedInOutputs.create_empty())
 
-        # Decoding should be always scheduled first by fcfs.
-        fcfs_policy = PolicyFactory.get_policy(policy_name="fcfs")
         remaining_running, running_scheduled = self._schedule_running(
             self.running,
             budget,
             curr_loras,
-            fcfs_policy,
+            #fcfs_policy,
+            self.default_policy,
             enable_chunking=True)
 
         # Schedule swapped out requests.
         # If preemption happens, it means we don't have space for swap-in.
+        #fcfs_policy = PolicyFactory.get_policy(policy_name='fcfs')
         if len(running_scheduled.preempted) + len(
                 running_scheduled.swapped_out) == 0:
             remaining_swapped, swapped_in = self._schedule_swapped(
-                self.swapped, budget, curr_loras, fcfs_policy)
+                self.swapped, budget, curr_loras, self.default_policy)
 
         # Schedule new prefills.
         remaining_waiting, prefills = self._schedule_prefills(
