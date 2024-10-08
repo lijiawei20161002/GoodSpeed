@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 # Define new data based on your table
 models = ["deepseek-llm-7b-base", "Llama-2-13b-chat-hf", "Qwen1.5-14B", "deepseek-llm-67b-chat", "Llama-3-70B"]
-oracle = [978, 978, 978, 978, 978]
+oracle = [978, 904, 943, 670, 589]
 fcfs = [910, 753, 703, 335, 335]
 deadline = [894, 668, 651, 332, 335]
 random = [904, 762, 732, 346, 341]

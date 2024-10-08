@@ -10,18 +10,18 @@ from typing import List
 #model_name ='/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
-model_name = '/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
+#model_name = '/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 #'/data/public_models/Llama-3-70B'
-#'/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
+model_name = '/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
 #model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 sys.path = ['/data/jiawei_li/GoodSpeed/vllm_source'] + sys.path
 from vllm import LLM, SamplingParams, RequestOutput
 import os
-#import ray
-#os.environ["RAY_TEMP_DIR"] = "/data/jiawei_li/ray_temp"
-#runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
-#ray.init(address="auto", runtime_env=runtime_env)
+import ray
+os.environ["RAY_TEMP_DIR"] = "/data/jiawei_li/ray_temp"
+runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
+ray.init(address="auto", runtime_env=runtime_env)
 
 nltk.download('brown')
 brown_words = brown.words()
@@ -71,8 +71,9 @@ prompts = [brown_text.split('.')[i] for i in range(num_requests)]
 sampling_params = SamplingParams(temperature=0, top_p=0.95)
 goodput = 0
 current_time = time.time()
+print(current_time)
 arrival_times = poisson_arrival_times_with_bursts(rate, num_requests, current_time, burst_rate, burst_duration, burst_interval)
-llm = LLM(model=model_name, trust_remote_code=True, enable_chunked_prefill=False, max_num_seqs=16) # tensor_parallel_size=4)
+llm = LLM(model=model_name, trust_remote_code=True, enable_chunked_prefill=False, max_num_seqs=16, tensor_parallel_size=4)
 outputs = llm.generate(prompts=prompts, sampling_params=sampling_params, arrivals=arrival_times)
 
 metrics_data = []

@@ -269,7 +269,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="bidding")
+        self.default_policy = PolicyFactory.get_policy(policy_name="offline")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -341,7 +341,7 @@ class Scheduler:
 
     def update_future_requests(self, now):
         """Move future requests to the active waiting queue if their arrival time is reached."""
-        while self.future and self.future[0].metrics.arrival_time <= now:
+        while self.future: #and self.future[0].metrics.arrival_time <= now:
             future_request = self.future.popleft()
             self.waiting.append(future_request)
 
@@ -444,7 +444,7 @@ class Scheduler:
             opportunity_cost = max(0, req.metrics.tokens/(req.metrics.deadline-now))
         #logging.info("len(waiting queue): "+str(len(self.waiting)))
         #all_requests = deque(list(running_queue) + list(self.swapped) + list(self.waiting) + list(self.future))
-        #running_queue = self.sort_requests(all_requests, policy, running_queue, now)
+        #running_queue = self.sort_requests(all_requests, policy, running_queue, now)0
         while running_queue:
             seq_group = running_queue[0]
             num_running_tokens = self._get_num_new_tokens(

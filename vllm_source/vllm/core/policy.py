@@ -89,7 +89,7 @@ class BiddingPolicy(Policy):
     ) -> float:
         remaining_tokens = seq_group.metrics.tokens - seq_group.get_seqs()[0].get_output_len()
         #remaining_tokens = seq_group.metrics.tokens - seq_group.metrics.processed_token
-        remaining_iterations = (seq_group.metrics.deadline - now) / 0.0602  
+        remaining_iterations = (seq_group.metrics.deadline - now) / 1.1664   
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OfflineSolverPolicy(Policy):
@@ -98,7 +98,7 @@ class OfflineSolverPolicy(Policy):
         self.max_batch_size = max_batch_size
         self.solved_priorities: Dict[int, float] = {}
         self.start = None
-        self.inference_time = 0.0588
+        self.inference_time = 0.9632
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
@@ -120,12 +120,12 @@ class OfflineSolverPolicy(Policy):
             # Create a new Gurobi model
             model.Params.LogToConsole = 0
             model.setParam('LogFile', 'offline.solver')
-            model.Params.Presolve = 1  # Aggressive Presolve
-            model.setParam('Aggregate', 1)  # More aggressive aggregation
+            model.Params.Presolve = 2  # Aggressive Presolve
+            model.setParam('Aggregate', 2)  # More aggressive aggregation
             model.setParam('Method', 1)  # 1.dual simplex 2.barrier method 3.concurrent
-            model.setParam('Heuristics', 0.1)
-            model.setParam('TimeLimit', 500)
-            model.setParam('MIPGap', 0.001)  
+            model.setParam('Heuristics', 0.5)
+            model.setParam('TimeLimit', 600)
+            model.setParam('MIPGap', 0.05)  
 
             # Define chunk size
             chunk_size = 100
@@ -146,10 +146,16 @@ class OfflineSolverPolicy(Policy):
 
             for i, req in enumerate(all_requests):
                 if isinstance(req, SequenceGroup):
-                    arrival_time = min(T, max(0, int((req.metrics.arrival_time - now) // inference_time)))
+                    arrival_time = max(0, int((req.metrics.arrival_time - now) // inference_time))
                     time_to_deadline = int((req.metrics.deadline - now) // inference_time)
-                    chunk_req_start = min(num_chunks, arrival_time // chunk_size)
+                    chunk_req_start = arrival_time // chunk_size
                     chunk_req_end = min(num_chunks, time_to_deadline // chunk_size)
+                    print(now, chunk_req_start, chunk_req_end)
+                    if chunk_req_end < 0:
+                        model.addConstr(
+                            finish[i]==0,
+                            f"Completion_chunk_{i}"
+                        )
 
                     # Constraint on token completion within chunks, respecting arrival time
                     for chunk in range(chunk_req_start, chunk_req_end):
