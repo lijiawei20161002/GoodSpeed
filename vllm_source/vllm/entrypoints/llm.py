@@ -133,6 +133,8 @@ class LLM:
         self,
         prompts: Optional[Union[str, List[str]]] = None,
         arrivals: List[float] = None,
+        output_lens: List[int] = None,
+        workload_types: List[str] = None,
         sampling_params: Optional[Union[SamplingParams,
                                         List[SamplingParams]]] = None,
         prompt_token_ids: Optional[List[List[int]]] = None,
@@ -172,6 +174,10 @@ class LLM:
                              "is True")
         if len(arrivals) != len(prompts):
             raise ValueError("The lengths of arrivals and prompts must be the same.")
+        if len(output_lens) != len(prompts):
+            raise ValueError("The lengths of output_lens and prompts must be the same.")
+        if len(workload_types) != len(prompts):
+            raise ValueError("The lengths of workload_types and prompts must be the same.")
         if isinstance(prompts, str):
             # Convert a single prompt to a list.
             prompts = [prompts]
@@ -207,6 +213,8 @@ class LLM:
                 sampling_params[i]
                 if isinstance(sampling_params, list) else sampling_params,
                 arrival_time = arrivals[i], 
+                output_tokens = output_lens[i],
+                workload_type = workload_types[i],
                 prompt_token_ids=token_ids,
                 lora_request=lora_request,
                 # Get ith image while maintaining the batch dim.
@@ -222,6 +230,8 @@ class LLM:
         prompt: Optional[str],
         sampling_params: SamplingParams,
         arrival_time: float, 
+        output_tokens: Optional[int],
+        workload_type: Optional[str],
         prompt_token_ids: Optional[List[int]],
         lora_request: Optional[LoRARequest] = None,
         multi_modal_data: Optional[MultiModalData] = None,
@@ -233,6 +243,8 @@ class LLM:
                                     sampling_params,
                                     prompt_token_ids,
                                     arrival_time = arrival_time,
+                                    output_tokens = output_tokens, 
+                                    workload_type = workload_type,
                                     lora_request=lora_request,
                                     multi_modal_data=multi_modal_data)
 

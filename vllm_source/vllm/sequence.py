@@ -108,17 +108,17 @@ class RequestMetrics:
     deadline: Optional[float] = field(init=False)
     price: float = 0.0
 
-    def __post_init__(self):
-        self.workload_type = random.choice(["search", "chatbox", "batch_analysis"])
+    def __post_init__(self): 
+        #self.workload_type = random.choice(["search", "chatbox", "batch_analysis"])
         if self.workload_type == "search":
-            self.deadline = self.arrival_time + random.uniform(0.5, 1)
-            self.tokens = 10
+            self.deadline = self.arrival_time + random.uniform(1, 5)
+            #self.tokens = 10
         elif self.workload_type == "chatbox":
-            self.tokens = 50
-            self.deadline = self.arrival_time + (self.tokens * 0.2)
+            #self.tokens = 50
+            self.deadline = self.arrival_time + (self.tokens * 0.5)
         elif self.workload_type == "batch_analysis":
             self.deadline = self.arrival_time + random.uniform(300, 3600)  # 5 minutes to 1 hour
-            self.tokens = 500
+            #self.tokens = 500
 
 class SequenceData:
     """Data associated with a sequence.
@@ -446,8 +446,8 @@ class SequenceGroup:
                                       first_scheduled_time=None,
                                       first_token_time=None,
                                       time_in_queue=None)
-        self.sampling_params.max_tokens = self.metrics.tokens
-        self.sampling_params.min_tokens = self.metrics.tokens
+        #self.sampling_params.max_tokens = self.metrics.tokens
+        #self.sampling_params.min_tokens = self.metrics.tokens
         self.lora_request = lora_request
         self.prompt_logprobs: Optional[PromptLogprobs] = None
         self.state = SequenceGroupState()

@@ -5,6 +5,8 @@ from collections import deque
 from transformers import GenerationConfig, PreTrainedTokenizer
 
 import vllm
+import random 
+random.seed(42)
 from vllm.config import (CacheConfig, DecodingConfig, DeviceConfig, LoadConfig,
                          LoRAConfig, ModelConfig, ParallelConfig,
                          SchedulerConfig, SpeculativeConfig,
@@ -357,6 +359,8 @@ class LLMEngine:
         sampling_params: SamplingParams,
         prompt_token_ids: Optional[List[int]] = None,
         arrival_time: Optional[float] = None,
+        output_tokens: Optional[int] = None,
+        workload_type: Optional[str] = None,
         lora_request: Optional[LoRARequest] = None,
         multi_modal_data: Optional[MultiModalData] = None,
     ) -> None:
@@ -445,6 +449,16 @@ class LLMEngine:
         # Create the sequence group.
         seq_group = SequenceGroup(request_id, [seq], sampling_params,
                                   arrival_time, lora_request, multi_modal_data)
+        seq_group.metrics.tokens = output_tokens
+        sampling_params.max_tokens = output_tokens
+        sampling_params.min_tokens = output_tokens
+        seq_group.metrics.workload_type = workload_type
+        if seq_group.metrics.workload_type == "search":
+            seq_group.metrics.deadline = seq_group.metrics.arrival_time + random.uniform(10, 30)
+        elif seq_group.metrics.workload_type == "chatbox":
+            seq_group.metrics.deadline = seq_group.metrics.arrival_time + (seq_group.metrics.tokens * 1.5)
+        elif seq_group.metrics.workload_type == "batch_analysis":
+            seq_group.metrics.deadline = seq_group.metrics.arrival_time + random.uniform(300, 3600)  # 5 minutes to 1 hour
 
         # Add the sequence group to the scheduler.
         self.scheduler.add_seq_group(seq_group, arrival_time)

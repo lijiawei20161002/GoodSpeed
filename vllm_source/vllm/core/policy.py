@@ -93,12 +93,12 @@ class BiddingPolicy(Policy):
         return remaining_tokens / max(remaining_iterations, 1)
 
 class OfflineSolverPolicy(Policy):
-    def __init__(self, planning_window_size: int = 1000, max_batch_size: int = 16, reserve: int = 0):
+    def __init__(self, planning_window_size: int = 10000, max_batch_size: int = 16, reserve: int = 0):
         self.planning_window_size = planning_window_size
         self.max_batch_size = max_batch_size
         self.solved_priorities: Dict[int, float] = {}
         self.start = None
-        self.inference_time = 0.9632
+        self.inference_time = 1.1664
     
     def solve_and_assign_priorities(self, now: float, seq_groups: Deque[SequenceGroup]):
         """Solve the optimization problem and assign priorities based on the solution."""
@@ -128,7 +128,7 @@ class OfflineSolverPolicy(Policy):
             model.setParam('MIPGap', 0.05)  
 
             # Define chunk size
-            chunk_size = 100
+            chunk_size = 20
             num_chunks = (T + chunk_size - 1) // chunk_size  # Calculate number of chunks
 
             # Decision variables (only one decision per chunk)
@@ -136,6 +136,7 @@ class OfflineSolverPolicy(Policy):
             finished = model.addVars(N, num_chunks, vtype=gp.GRB.BINARY, name="finished_chunk")
             finish = model.addVars(N, vtype=gp.GRB.BINARY, name="finish")
             b = self.max_batch_size
+            print("N, T", N, T)
 
             # Objective: maximize the number of completed sequences plus sum of request processing
             objective = gp.quicksum(finish[i] for i in range(N))
