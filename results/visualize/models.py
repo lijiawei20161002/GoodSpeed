@@ -20,8 +20,9 @@ index = range(len(models))
 bars1 = plt.bar(index, oracle, bar_width, color='pink', hatch='-', label='Oracle Goodput')
 bars2 = plt.bar([i + bar_width for i in index], fcfs, bar_width, color='orchid', hatch='/', label='FCFS Goodput')
 bars3 = plt.bar([i + bar_width*2 for i in index], deadline, bar_width, color='steelblue', hatch='+', label='Deadline Goodput')
-bars4 = plt.bar([i + bar_width*3 for i in index], random, bar_width, color='cadetblue', hatch='.', label='Random Goodput')
-bars5 = plt.bar([i + bar_width*4 for i in index], bidding, bar_width, color='green', label='Bidding Goodput')
+bars5 = plt.bar([i + bar_width*3 for i in index], bidding, bar_width, color='green', label='SRF Goodput')
+bars4 = plt.bar([i + bar_width*4 for i in index], random, bar_width, color='cadetblue', hatch='.', label='Random Goodput')
+bars5 = plt.bar([i + bar_width*5 for i in index], bidding, bar_width, color='green', label='Bidding Goodput')
 
 # Add text labels on the bars
 for i, v in enumerate(oracle):

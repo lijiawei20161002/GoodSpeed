@@ -78,7 +78,7 @@ class DeadlinePrioritizePolicy(Policy):
         now: float,
         seq_group: SequenceGroup,
     ) -> float:
-        return seq_group.metrics.deadline
+        return 0-seq_group.metrics.deadline
 
 class BiddingPolicy(Policy):
 
@@ -91,6 +91,16 @@ class BiddingPolicy(Policy):
         #remaining_tokens = seq_group.metrics.tokens - seq_group.metrics.processed_token
         remaining_iterations = (seq_group.metrics.deadline - now) / 1.1664   
         return remaining_tokens / max(remaining_iterations, 1)
+
+class ShortestRequestFirstPolicy(Policy):
+    def get_priority(
+        self,
+        now: float,
+        seq_group: SequenceGroup,
+    ) -> float:
+        remaining_tokens = seq_group.metrics.tokens - seq_group.get_seqs()[0].get_output_len()
+        return 0-remaining_tokens
+
 
 class OfflineSolverPolicy(Policy):
     def __init__(self, planning_window_size: int = 10000, max_batch_size: int = 16, reserve: int = 0):
@@ -310,7 +320,7 @@ class OnlineSolverPolicy(Policy):
 
 class PolicyFactory:
 
-    _POLICY_REGISTRY = {'fcfs': FCFS, 'random': RandomPolicy, 'deadline': DeadlinePrioritizePolicy, 'bidding': BiddingPolicy, 'offline': OfflineSolverPolicy, 'solver': OnlineSolverPolicy}
+    _POLICY_REGISTRY = {'fcfs': FCFS, 'random': RandomPolicy, 'deadline': DeadlinePrioritizePolicy, 'bidding': BiddingPolicy, 'srf': ShortestRequestFirstPolicy, 'offline': OfflineSolverPolicy, 'solver': OnlineSolverPolicy}
 
     @classmethod
     def get_policy(cls, policy_name: str, **kwargs) -> Policy:

@@ -7,7 +7,6 @@ import numpy as np
 from typing import List
 from huggingface_hub import snapshot_download
 
-#'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #model_name ='/data/huggingface/models--deepseek-ai--deepseek-llm-7b-base/snapshots/7683fea62db869066ddaff6a41d032262c490d4f' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
 #model_name = '/data/huggingface/models--Qwen--Qwen1.5-14B/snapshots/dce4b190d34470818e5bec2a92cb8233aaa02ca2'
