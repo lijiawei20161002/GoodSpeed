@@ -6,6 +6,7 @@ import sys
 import numpy as np
 from typing import List
 
+model_name = '/data/public_models/Llama-2-7b-chat-hf'
 #'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #model_name ='/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
@@ -13,15 +14,16 @@ from typing import List
 #model_name = '/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 #'/data/public_models/Llama-3-70B'
-model_name = '/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
+#model_name = 'deepseek-ai/deepseek-llm-67b-chat'
+#model_name = '/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
 #model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 sys.path = ['/data/jiawei_li/GoodSpeed/vllm_source'] + sys.path
 from vllm import LLM, SamplingParams, RequestOutput
 import os
-import ray
-os.environ["RAY_TEMP_DIR"] = "/data/jiawei_li/ray_temp"
+#import ray
+#os.environ["RAY_TEMP_DIR"] = "/data/jiawei_li/ray_temp"
 runtime_env = {"env_vars": {"PYTHONPATH": "/data/jiawei_li/GoodSpeed/vllm_source"}}
-ray.init(address="auto", runtime_env=runtime_env)
+#ray.init(address="auto", runtime_env=runtime_env)
 
 nltk.download('brown')
 brown_words = brown.words()

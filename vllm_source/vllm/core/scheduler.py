@@ -15,6 +15,7 @@ from vllm.lora.request import LoRARequest
 from vllm.sequence import (Sequence, SequenceData, SequenceGroup,
                            SequenceGroupMetadata, SequenceStatus)
 from vllm.utils import merge_dicts
+import torch
 
 logger = init_logger(__name__)
 logging.basicConfig(
@@ -25,6 +26,18 @@ logging.basicConfig(
         logging.FileHandler(__name__+'.log', mode='a'),  # Append mode
     ]
 )
+
+def log_memory_status(tag: str):
+    if torch.cuda.is_available():
+        memory_allocated = torch.cuda.memory_allocated() / (1024 ** 2)
+        memory_reserved = torch.cuda.memory_reserved() / (1024 ** 2)
+        memory_free = torch.cuda.memory_reserved() - torch.cuda.memory_allocated()
+        logger.info(
+            f"[{tag}] GPU Memory - Allocated: {memory_allocated:.2f} MB, "
+            f"Reserved: {memory_reserved:.2f} MB, Free: {memory_free:.2f} MB"
+        )
+    else:
+        logger.info(f"[{tag}] GPU is not available.")
 
 # Test-only. If configured, decode is preempted with
 # ARTIFICIAL_PREEMPTION_PROB% probability.
@@ -269,7 +282,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="deadline")
+        self.default_policy = PolicyFactory.get_policy(policy_name="srf")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -758,6 +771,8 @@ class Scheduler:
         decodes. If there's a pressure on GPU memory, decode requests can
         be swapped or preempted.
         """
+        log_memory_status("Before scheduling")
+
         # Include running requests to the budget.
         budget = SchedulingBudget(
             token_budget=self.scheduler_config.max_num_batched_tokens,
@@ -828,6 +843,7 @@ class Scheduler:
         # doesn't allow chunked prefills.
         assert len(running_scheduled.prefill_seq_groups) == 0
         assert len(swapped_in.prefill_seq_groups) == 0
+        log_memory_status("After scheduling")
         return SchedulerOutputs(
             scheduled_seq_groups=(prefills.seq_groups +
                                   running_scheduled.decode_seq_groups +
