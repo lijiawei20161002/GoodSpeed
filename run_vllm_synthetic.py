@@ -7,17 +7,21 @@ import numpy as np
 from typing import List
 
 #model_name = '/data/public_models/Llama-2-7b-chat-hf'
+model_name = '/data/public_models/models--01-ai--Yi-34B/snapshots/e7c4235bd6fb99051b284f8493a406141b8caf05'
+#model_name = '/data/public_models/models--deepseek-ai--deepseek-llm-7b-chat/snapshots/afbda8b347ec881666061fa67447046fc5164ec8'
 #'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #model_name ='/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 #model_name = '/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
+#model_name = 'Qwen/Qwen1.5-14B'
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
-#'/data/public_models/Llama-3-70B'
+#model_name = '/data/public_models/Llama-3-70B'
 #model_name = '/data/public_models/models--deepseek-ai--deepseek-llm-67b-chat/snapshots/79648bef7658bb824e4630740f6e1484c1b0620b'
+#model_name = '/data/public_models/Llama-3.1-70B-Instruct'
 #model_name = '/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
 #model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
-model_name = '/data/public_models/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/5f0b02c75b57c5855da9ae460ce51323ea669d8a'
+#model_name = '/data/public_models/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/5f0b02c75b57c5855da9ae460ce51323ea669d8a'
 sys.path = ['/data/jiawei_li/GoodSpeed/vllm_source'] + sys.path
 from vllm import LLM, SamplingParams, RequestOutput
 import os
@@ -75,7 +79,7 @@ sampling_params = SamplingParams(temperature=0, top_p=0.95)
 goodput = 0
 current_time = time.time()
 arrival_times = poisson_arrival_times_with_bursts(rate, num_requests, current_time, burst_rate, burst_duration, burst_interval)
-llm = LLM(model=model_name, trust_remote_code=True, enable_chunked_prefill=False, max_num_seqs=16) # tensor_parallel_size=4)
+llm = LLM(model=model_name, trust_remote_code=True, enable_chunked_prefill=False, max_num_seqs=2) # tensor_parallel_size=4)
 outputs = llm.generate(prompts=prompts, sampling_params=sampling_params, arrivals=arrival_times)
 
 metrics_data = []

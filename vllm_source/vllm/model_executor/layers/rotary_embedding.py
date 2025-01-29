@@ -476,11 +476,12 @@ def get_rope(
            rope_scaling_args)
     if key in _ROPE_DICT:
         return _ROPE_DICT[key]
+    rope_scaling = None
     if rope_scaling is None:
         rotary_emb = RotaryEmbedding(head_size, rotary_dim, max_position, base,
                                      is_neox_style)
     else:
-        scaling_type = rope_scaling["type"]
+        scaling_type = rope_scaling["rope_type"]
         if scaling_type != "su":
             scaling_factor = rope_scaling["factor"]
         if scaling_type == "linear":

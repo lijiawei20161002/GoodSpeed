@@ -5,6 +5,7 @@ models = ["deepseek-llm-7b-base", "Llama-2-13b-chat-hf", "Qwen1.5-14B", "deepsee
 oracle = [978, 904, 943, 670, 589]
 fcfs = [936, 693, 693, 335, 335]
 deadline = [908, 677, 640, 329, 335]
+srf = [803, 693, 694, 332, 309]
 random = [941, 754, 719, 337, 355]
 bidding = [961, 840, 819, 467, 557]
 
@@ -20,9 +21,9 @@ index = range(len(models))
 bars1 = plt.bar(index, oracle, bar_width, color='pink', hatch='-', label='Oracle Goodput')
 bars2 = plt.bar([i + bar_width for i in index], fcfs, bar_width, color='orchid', hatch='/', label='FCFS Goodput')
 bars3 = plt.bar([i + bar_width*2 for i in index], deadline, bar_width, color='steelblue', hatch='+', label='Deadline Goodput')
-bars5 = plt.bar([i + bar_width*3 for i in index], bidding, bar_width, color='green', label='SRF Goodput')
-bars4 = plt.bar([i + bar_width*4 for i in index], random, bar_width, color='cadetblue', hatch='.', label='Random Goodput')
-bars5 = plt.bar([i + bar_width*5 for i in index], bidding, bar_width, color='green', label='Bidding Goodput')
+bars4 = plt.bar([i + bar_width*3 for i in index], srf, bar_width, color='lavender', hatch='.', label='SRF Goodput')
+bars5 = plt.bar([i + bar_width*4 for i in index], random, bar_width, color='cadetblue', hatch='.', label='Random Goodput')
+bars6 = plt.bar([i + bar_width*5 for i in index], bidding, bar_width, color='green', label='Bidding Goodput')
 
 # Add text labels on the bars
 for i, v in enumerate(oracle):
@@ -31,10 +32,12 @@ for i, v in enumerate(fcfs):
     plt.text(i + bar_width, v + 10, str(v), ha='center', fontsize=10)
 for i, v in enumerate(deadline):
     plt.text(i + bar_width*2, v + 10, str(v), ha='center', fontsize=10)
-for i, v in enumerate(random):
+for i, v in enumerate(srf):
     plt.text(i + bar_width*3, v + 10, str(v), ha='center', fontsize=10)
-for i, v in enumerate(bidding):
+for i, v in enumerate(random):
     plt.text(i + bar_width*4, v + 10, str(v), ha='center', fontsize=10)
+for i, v in enumerate(bidding):
+    plt.text(i + bar_width*5, v + 10, str(v), ha='center', fontsize=10)
 
 # Labels and titles
 plt.xlabel('Models', fontsize=16)

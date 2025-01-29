@@ -449,7 +449,7 @@ class LLMEngine:
         # Create the sequence group.
         seq_group = SequenceGroup(request_id, [seq], sampling_params,
                                   arrival_time, lora_request, multi_modal_data)
-        seq_group.metrics.tokens = output_tokens
+        #seq_group.metrics.tokens = output_tokens
         #sampling_params.max_tokens = output_tokens
         #sampling_params.min_tokens = output_tokens
         #seq_group.metrics.workload_type = workload_type
