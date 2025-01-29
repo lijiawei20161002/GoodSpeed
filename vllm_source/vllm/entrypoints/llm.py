@@ -230,8 +230,8 @@ class LLM:
         prompt: Optional[str],
         sampling_params: SamplingParams,
         arrival_time: float, 
-        output_tokens: Optional[int],
-        workload_type: Optional[str],
+        #output_tokens: Optional[int],
+        #workload_type: Optional[str],
         prompt_token_ids: Optional[List[int]],
         lora_request: Optional[LoRARequest] = None,
         multi_modal_data: Optional[MultiModalData] = None,
@@ -243,8 +243,8 @@ class LLM:
                                     sampling_params,
                                     prompt_token_ids,
                                     arrival_time = arrival_time,
-                                    output_tokens = output_tokens, 
-                                    workload_type = workload_type,
+                                    #output_tokens = output_tokens, 
+                                    #workload_type = workload_type,
                                     lora_request=lora_request,
                                     multi_modal_data=multi_modal_data)
 

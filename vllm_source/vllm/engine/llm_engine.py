@@ -359,8 +359,8 @@ class LLMEngine:
         sampling_params: SamplingParams,
         prompt_token_ids: Optional[List[int]] = None,
         arrival_time: Optional[float] = None,
-        output_tokens: Optional[int] = None,
-        workload_type: Optional[str] = None,
+        #output_tokens: Optional[int] = None,
+        #workload_type: Optional[str] = None,
         lora_request: Optional[LoRARequest] = None,
         multi_modal_data: Optional[MultiModalData] = None,
     ) -> None:
@@ -450,9 +450,9 @@ class LLMEngine:
         seq_group = SequenceGroup(request_id, [seq], sampling_params,
                                   arrival_time, lora_request, multi_modal_data)
         seq_group.metrics.tokens = output_tokens
-        sampling_params.max_tokens = output_tokens
-        sampling_params.min_tokens = output_tokens
-        seq_group.metrics.workload_type = workload_type
+        #sampling_params.max_tokens = output_tokens
+        #sampling_params.min_tokens = output_tokens
+        #seq_group.metrics.workload_type = workload_type
         if seq_group.metrics.workload_type == "search":
             seq_group.metrics.deadline = seq_group.metrics.arrival_time + random.uniform(10, 30)
         elif seq_group.metrics.workload_type == "chatbox":
