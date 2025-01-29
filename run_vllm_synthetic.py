@@ -6,7 +6,7 @@ import sys
 import numpy as np
 from typing import List
 
-model_name = '/data/public_models/Llama-2-7b-chat-hf'
+#model_name = '/data/public_models/Llama-2-7b-chat-hf'
 #'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #model_name ='/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  
@@ -14,9 +14,10 @@ model_name = '/data/public_models/Llama-2-7b-chat-hf'
 #model_name = '/data/public_models/huggingface/meta-llama/Meta-Llama-3-70B-Instruct'
 #'/data/public_models/huggingface/Qwen/Qwen1.5-14B'
 #'/data/public_models/Llama-3-70B'
-#model_name = 'deepseek-ai/deepseek-llm-67b-chat'
+#model_name = '/data/public_models/models--deepseek-ai--deepseek-llm-67b-chat/snapshots/79648bef7658bb824e4630740f6e1484c1b0620b'
 #model_name = '/data/public_models/huggingface/deepseek-ai/deepseek-llm-67b-chat'
 #model_name = '/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
+model_name = '/data/public_models/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/5f0b02c75b57c5855da9ae460ce51323ea669d8a'
 sys.path = ['/data/jiawei_li/GoodSpeed/vllm_source'] + sys.path
 from vllm import LLM, SamplingParams, RequestOutput
 import os

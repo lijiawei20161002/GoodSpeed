@@ -174,10 +174,10 @@ class LLM:
                              "is True")
         if len(arrivals) != len(prompts):
             raise ValueError("The lengths of arrivals and prompts must be the same.")
-        if len(output_lens) != len(prompts):
-            raise ValueError("The lengths of output_lens and prompts must be the same.")
-        if len(workload_types) != len(prompts):
-            raise ValueError("The lengths of workload_types and prompts must be the same.")
+        #if len(output_lens) != len(prompts):
+        #    raise ValueError("The lengths of output_lens and prompts must be the same.")
+        #if len(workload_types) != len(prompts):
+        #    raise ValueError("The lengths of workload_types and prompts must be the same.")
         if isinstance(prompts, str):
             # Convert a single prompt to a list.
             prompts = [prompts]
@@ -213,8 +213,8 @@ class LLM:
                 sampling_params[i]
                 if isinstance(sampling_params, list) else sampling_params,
                 arrival_time = arrivals[i], 
-                output_tokens = output_lens[i],
-                workload_type = workload_types[i],
+                #output_tokens = output_lens[i],
+                #workload_type = workload_types[i],
                 prompt_token_ids=token_ids,
                 lora_request=lora_request,
                 # Get ith image while maintaining the batch dim.

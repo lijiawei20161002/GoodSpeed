@@ -282,7 +282,7 @@ class Scheduler:
         self.lora_config = lora_config
         print('=====================')
         print("chunked_prefill_enabled:", self.scheduler_config.chunked_prefill_enabled)
-        self.default_policy = PolicyFactory.get_policy(policy_name="srf")
+        self.default_policy = PolicyFactory.get_policy(policy_name="fcfs")
 
         if self.scheduler_config.chunked_prefill_enabled:
             self.prompt_limit = self.scheduler_config.max_model_len
@@ -771,7 +771,7 @@ class Scheduler:
         decodes. If there's a pressure on GPU memory, decode requests can
         be swapped or preempted.
         """
-        log_memory_status("Before scheduling")
+        #log_memory_status("Before scheduling")
 
         # Include running requests to the budget.
         budget = SchedulingBudget(
@@ -843,7 +843,7 @@ class Scheduler:
         # doesn't allow chunked prefills.
         assert len(running_scheduled.prefill_seq_groups) == 0
         assert len(swapped_in.prefill_seq_groups) == 0
-        log_memory_status("After scheduling")
+        #log_memory_status("After scheduling")
         return SchedulerOutputs(
             scheduled_seq_groups=(prefills.seq_groups +
                                   running_scheduled.decode_seq_groups +
