@@ -450,8 +450,9 @@ class LLMEngine:
         seq_group = SequenceGroup(request_id, [seq], sampling_params,
                                   arrival_time, lora_request, multi_modal_data)
         #seq_group.metrics.tokens = output_tokens
-        #sampling_params.max_tokens = output_tokens
-        #sampling_params.min_tokens = output_tokens
+        output_tokens = seq_group.metrics.tokens
+        sampling_params.max_tokens = output_tokens #int(output_tokens * 1.2)
+        sampling_params.min_tokens = output_tokens #int(output_tokens * 0.8)
         #seq_group.metrics.workload_type = workload_type
         if seq_group.metrics.workload_type == "search":
             seq_group.metrics.deadline = seq_group.metrics.arrival_time + random.uniform(10, 30)

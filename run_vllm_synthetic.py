@@ -7,8 +7,8 @@ import numpy as np
 from typing import List
 
 #model_name = '/data/public_models/Llama-2-7b-chat-hf'
-model_name = '/data/public_models/models--01-ai--Yi-34B/snapshots/e7c4235bd6fb99051b284f8493a406141b8caf05'
-#model_name = '/data/public_models/models--deepseek-ai--deepseek-llm-7b-chat/snapshots/afbda8b347ec881666061fa67447046fc5164ec8'
+#model_name = '/data/public_models/models--01-ai--Yi-34B/snapshots/e7c4235bd6fb99051b284f8493a406141b8caf05'
+model_name = '/data/public_models/models--deepseek-ai--deepseek-llm-7b-chat/snapshots/afbda8b347ec881666061fa67447046fc5164ec8'
 #'/data/public_models/huggingface/meta-llama/Llama-2-13b-chat-hf'
 #model_name ='/data/public_models/huggingface/deepseek-ai/deepseek-llm-7b-base' 
 #'/data/public_models/huggingface/meta-llama/Meta-Llama-3-8B'  

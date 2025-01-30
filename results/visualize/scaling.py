@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 
 # Data
 requests = [100, 500, 1000, 5000]
-oracle_goodput = [77, 474, 978, 4923]
+#oracle_goodput = [77, 474, 978, 4923]
 fcfs_goodput = [55, 387, 693, 4290]
 deadline_goodput = [39, 332, 677, 4048]
+srf_goodput = [55, 398, 712, 4410]
 random_goodput = [50, 368, 754, 4192]
 bidding_goodput = [55, 393, 840, 4605]
 
@@ -13,7 +14,8 @@ plt.rcParams['font.family'] = 'Comic Sans MS'
 fig, ax = plt.subplots(figsize=(12, 6))
 
 # Plot lines
-plt.plot(requests, oracle_goodput, color='pink', marker='o', label='Oracle Goodput')
+#plt.plot(requests, oracle_goodput, color='pink', marker='o', label='Oracle Goodput')
+plt.plot(requests, srf_goodput, color='pink', marker='o', label='SRF Goodput')
 plt.plot(requests, fcfs_goodput, color='orchid', marker='*', label='FCFS Goodput')
 plt.plot(requests, deadline_goodput, color='steelblue', marker='^', label='Deadline Prioritize Goodput')
 plt.plot(requests, random_goodput, color='cadetblue', marker='+', label='Random Goodput')
@@ -26,7 +28,7 @@ horizontal_positions = [50, 50, 100, -100, 50]  # Positive for right, negative f
 
 # Draw labels near the last point but adjust positions to avoid crowding
 for i, (label, hp_offset) in enumerate(zip(
-    [oracle_goodput, fcfs_goodput, deadline_goodput, random_goodput, bidding_goodput],
+    [srf_goodput, fcfs_goodput, deadline_goodput, random_goodput, bidding_goodput],
     horizontal_positions
 )):
     last_x = requests[-1]
