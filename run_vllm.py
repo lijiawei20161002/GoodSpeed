@@ -55,6 +55,7 @@ brown_text = ' '.join(brown_words)
 prompts = []
 current_index = 0
 for length in input_lens:
+    length = max(length, 1)
     prompt = ' '.join(brown_words[current_index:current_index + length])
     prompts.append(prompt)
     current_index += length
